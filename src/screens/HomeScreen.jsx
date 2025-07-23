@@ -1,160 +1,229 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, StatusBar } from 'react-native';
-import Carousel from 'react-native-snap-carousel';
+import {
+    View,
+    ScrollView,
+    Image,
+    StyleSheet,
+    Dimensions,
+    Text,
+    TouchableOpacity,
+} from 'react-native';
+import { BlurView } from '@react-native-community/blur';
+import Video from 'react-native-video';
+import { useIsFocused } from '@react-navigation/native';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-const data = [
-    { id: '1', url: 'https://picsum.photos/id/1015/600/400' },
-    { id: '2', url: 'https://picsum.photos/id/1016/600/400' },
-    { id: '3', url: 'https://picsum.photos/id/1018/600/400' },
+const images = [
+    'https://plus.unsplash.com/premium_photo-1664301448502-c1c7a573aef9?q=80&w=904&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
 ];
 
-const App = () => {
-
-    const carouselRef = useRef(null);
+const Carousel = ({ navigation }) => {
+    const scrollViewRef = useRef(null);
     const [activeIndex, setActiveIndex] = useState(0);
 
-    // Auto-slide every 3 seconds
     useEffect(() => {
         const interval = setInterval(() => {
-            let nextIndex = (activeIndex + 1) % data.length;
-            carouselRef.current.snapToItem(nextIndex);
-        }, 3000);
-
+            const nextIndex = (activeIndex + 1) % images.length;
+            scrollViewRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+            setActiveIndex(nextIndex);
+        }, 2000);
         return () => clearInterval(interval);
     }, [activeIndex]);
 
-    const renderItem = ({ item }) => (
-        <Image source={{ uri: item.url }} style={styles.image} resizeMode="cover" />
-    );
-    return (
-        <View style={styles.container}>
-            <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+    const onScroll = (event) => {
+        const index = Math.round(event.nativeEvent.contentOffset.x / width);
+        setActiveIndex(index);
+    };
 
-            {/* Top Bar with Login */}
-            <View style={styles.topBar}>
-                <TouchableOpacity onPress={() => alert('Login pressed')}>
-                    <Text style={styles.loginText}>Login</Text>
+    const isFocused = useIsFocused();
+
+    return (
+        <ScrollView style={styles.carouselContainer} contentContainerStyle={{ paddingBottom: 50 }}>
+            <View style={styles.header}>
+                <Text style={styles.brand}>CropCircle</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginButton}>
+                    <Text style={styles.loginButtonText} >Login</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Logo and App Details */}
-            <View style={styles.logoSection}>
+            <ScrollView
+                ref={scrollViewRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+            >
+                {images.map((img, index) => (
+                    <Image key={index} source={{ uri: img }} style={styles.image} />
+                ))}
+            </ScrollView>
+
+            <View style={styles.indicatorContainer}>
+                {images.map((_, i) => (
+                    <View
+                        key={i}
+                        style={[styles.dot, i === activeIndex ? styles.activeDot : null]}
+                    />
+                ))}
+            </View>
+
+            <View style={styles.squareContainer}>
                 <Image
-                    source={{ uri: 'https://cdn.dribbble.com/userupload/43791971/file/original-47c8d7630a5efb68354f911ee4275f8a.jpg?resize=1024x768&vertical=center' }}
-                    style={styles.logo}
+                    source={{
+                        uri: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+                    }}
+                    style={styles.squareImage}
                 />
-                {/* <Text style={styles.appName}>YourApp</Text> */}
-                {/* <Text style={styles.tagline}>The best platform to hire or get hired</Text> */}
+
+                {/* Glass overlay over the entire image */}
+                <BlurView
+                    style={styles.fullGlass}
+                    blurType="light"
+                    blurAmount={5}
+                    overlayColor="transparent"
+                >
+                    <Text style={styles.glassText}>
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged.
+                    </Text>
+                </BlurView>
             </View>
 
-            <View>
-                <Carousel
-                    ref={carouselRef}
-                    data={data}
-                    renderItem={renderItem}
-                    sliderWidth={screenWidth}
-                    itemWidth={screenWidth}
-                    onSnapToItem={index => setActiveIndex(index)}
-                    loop={true}
-                    autoplay={false} // we use manual interval autoplay
-                />
+            <View style={styles.videoHeader}>
+                <Text style={styles.brand}>Community</Text>
             </View>
 
-            {/* Action Buttons */}
-            {/* <View style={styles.buttonGroup}>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => alert('Discover Jobs')}>
-          <Text style={styles.primaryButtonText}>Discover Jobs</Text>
-        </TouchableOpacity>
+            {isFocused && (
+                <Video
+                    source={{ uri: 'https://videos.pexels.com/video-files/10041437/10041437-hd_1920_1080_24fps.mp4' }}
+                    style={styles.video}
+                    resizeMode="cover"
+                    repeat={true}
+                    muted={true}
+                    controls={false}
+                    fullscreen={false}
+                    ignoreSilentSwitch="ignore"
+                    onError={e => console.error(e)}
+                />
+            )}
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => alert('Post a Job')}>
-          <Text style={styles.secondaryButtonText}>Post a Job</Text>
-        </TouchableOpacity>
-      </View> */}
-        </View>
+            <View style={styles.footer}>
+                <Text style={styles.footerText}>Crafted by Softhought in Kolkata</Text>
+            </View>
+        </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        width: '100%',
-        height: '100%',
-        padding: '4%',
-        backgroundColor: '#ffffff',
-        paddingTop: 40,
-        paddingHorizontal: 24,
+    carouselContainer: {
+        paddingVertical: 25,
+        paddingHorizontal: '4%',
+        backgroundColor: '#FFFFF0',
     },
-    topBar: {
+    header: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
-    },
-    loginText: {
-        fontSize: 16,
-        color: '#4A5CF0',
-        fontWeight: '600',
-    },
-    logoSection: {
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 60,
-    },
-    logo: {
-        width: 100,
-        height: 100,
-        borderRadius: 20,
-        marginBottom: 20,
-        backgroundColor: '#eee',
-    },
-    appName: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#000',
-    },
-    tagline: {
-        fontSize: 16,
-        color: '#444',
-        textAlign: 'center',
-        marginTop: 8,
+        marginBottom: 50,
         paddingHorizontal: 10,
     },
-    buttonGroup: {
-        marginTop: 60,
+    videoHeader: {
+        textAlign: 'center',
         alignItems: 'center',
+        marginBottom: 20,
+        paddingHorizontal: 10,
     },
-    primaryButton: {
-        backgroundColor: '#4A5CF0',
-        paddingVertical: 14,
-        paddingHorizontal: 30,
-        borderRadius: 12,
-        marginVertical: 10,
-        width: '80%',
-        alignItems: 'center',
+    brand: {
+        fontSize: 30,
+        fontWeight: 'bold',
     },
-    secondaryButton: {
-        backgroundColor: '#E8ECFF',
-        paddingVertical: 14,
-        paddingHorizontal: 30,
-        borderRadius: 12,
-        marginVertical: 10,
-        width: '80%',
-        alignItems: 'center',
+    loginButton: {
+        backgroundColor: 'green',
+        paddingVertical: 8,
+        paddingHorizontal: 25,
+        borderRadius: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 2,
     },
-    primaryButtonText: {
+    loginButtonText: {
         fontSize: 16,
-        fontWeight: '600',
         color: '#fff',
     },
-    secondaryButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#4A5CF0',
-    },
-
     image: {
-        width: screenWidth,
+        width: width,
         height: 200,
+        resizeMode: 'cover',
+    },
+    indicatorContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 10,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#ccc',
+        marginHorizontal: 4,
+    },
+    activeDot: {
+        backgroundColor: '#000',
+        width: 10,
+        height: 10,
+    },
+    squareContainer: {
+        marginTop: 20,
+        alignItems: 'center',
+        position: 'relative',
+        marginBottom: 50,
+    },
+    squareImage: {
+        width: width * 0.75,
+        height: width * 0.75,
         borderRadius: 10,
+    },
+    fullGlass: {
+        position: 'absolute',
+        top: 60,
+        bottom: 0,
+        height: width * 0.65,
+        width: width * 0.65,
+        borderRadius: 20,
+        alignSelf: 'center',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    },
+    glassText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+        textAlign: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        textAlignVertical: 'center',
+    },
+    video: {
+        width: '100%',
+        height: 200,
+        marginBottom: 20,
+    },
+    footer: {
+        marginTop: 50,
+        alignItems: 'center',
+    },
+    footerText: {
+        fontSize: 16,
+        color: '#555',
+        textAlign: 'center',
+        paddingHorizontal: 20,
     },
 });
 
-export default App;
+export default Carousel;

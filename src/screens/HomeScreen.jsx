@@ -9,43 +9,54 @@ import {
     TouchableOpacity,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
-import Video from 'react-native-video';
 import { useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const images = [
-    'https://plus.unsplash.com/premium_photo-1664301448502-c1c7a573aef9?q=80&w=904&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    'https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_photo-1664301448502-c1c7a573aef9?q=80&w=904&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?q=80&w=870&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=870&auto=format&fit=crop',
 ];
+
+const collageImages = [
+    'https://images.unsplash.com/photo-1492496913980-501348b61469?q=80&w=387&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://plus.unsplash.com/premium_photo-1663945779273-ebc45569fb9f?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://images.unsplash.com/photo-1598030304671-5aa1d6f21128?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+];
+
 
 const Carousel = ({ navigation }) => {
     const scrollViewRef = useRef(null);
     const [activeIndex, setActiveIndex] = useState(0);
+    const isFocused = useIsFocused();
 
     useEffect(() => {
+        if (!isFocused) return;
+
         const interval = setInterval(() => {
-            const nextIndex = (activeIndex + 1) % images.length;
-            scrollViewRef.current?.scrollTo({ x: nextIndex * width, animated: true });
-            setActiveIndex(nextIndex);
-        }, 2000);
+            setActiveIndex(prev => {
+                const nextIndex = (prev + 1) % images.length;
+                scrollViewRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+                return nextIndex;
+            });
+        }, 3000);
+
         return () => clearInterval(interval);
-    }, [activeIndex]);
+    }, [isFocused]);
 
     const onScroll = (event) => {
         const index = Math.round(event.nativeEvent.contentOffset.x / width);
         setActiveIndex(index);
     };
 
-    const isFocused = useIsFocused();
 
     return (
         <ScrollView style={styles.carouselContainer} contentContainerStyle={{ paddingBottom: 50 }}>
             <View style={styles.header}>
                 <Text style={styles.brand}>CropCircle</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.loginButton}>
-                    <Text style={styles.loginButtonText} >Login</Text>
+                    <Text style={styles.loginButtonText}>Login</Text>
                 </TouchableOpacity>
             </View>
 
@@ -56,6 +67,7 @@ const Carousel = ({ navigation }) => {
                 showsHorizontalScrollIndicator={false}
                 onScroll={onScroll}
                 scrollEventThrottle={16}
+                removeClippedSubviews={false}
             >
                 {images.map((img, index) => (
                     <Image key={index} source={{ uri: img }} style={styles.image} />
@@ -74,12 +86,10 @@ const Carousel = ({ navigation }) => {
             <View style={styles.squareContainer}>
                 <Image
                     source={{
-                        uri: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+                        uri: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=774&auto=format&fit=crop',
                     }}
                     style={styles.squareImage}
                 />
-
-                {/* Glass overlay over the entire image */}
                 <BlurView
                     style={styles.fullGlass}
                     blurType="light"
@@ -87,28 +97,26 @@ const Carousel = ({ navigation }) => {
                     overlayColor="transparent"
                 >
                     <Text style={styles.glassText}>
-                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged.
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. It has survived not only five centuries.
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. It has survived not only five centuries.
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. It has survived not only five centuries.
+                        Lorem Ipsum is simply dummy text of the printing and typesetting industry. It has survived not only five centuries.
                     </Text>
                 </BlurView>
             </View>
 
-            <View style={styles.videoHeader}>
-                <Text style={styles.brand}>Community</Text>
+            {/* <View style={styles.videoHeader}>
+                <Text style={styles.brand}>Community Collage</Text>
+            </View> */}
+
+            <View style={styles.collageRow}>
+                <Image source={{ uri: collageImages[0] }} style={styles.collageImageLeft} />
+                <View style={styles.collageRight}>
+                    <Image source={{ uri: collageImages[1] }} style={styles.collageImageRightTop} />
+                    <Image source={{ uri: collageImages[2] }} style={styles.collageImageRightBottom} />
+                </View>
             </View>
 
-            {isFocused && (
-                <Video
-                    source={{ uri: 'https://videos.pexels.com/video-files/10041437/10041437-hd_1920_1080_24fps.mp4' }}
-                    style={styles.video}
-                    resizeMode="cover"
-                    repeat={true}
-                    muted={true}
-                    controls={false}
-                    fullscreen={false}
-                    ignoreSilentSwitch="ignore"
-                    onError={e => console.error(e)}
-                />
-            )}
 
             <View style={styles.footer}>
                 <Text style={styles.footerText}>Crafted by Softhought in Kolkata</Text>
@@ -119,6 +127,7 @@ const Carousel = ({ navigation }) => {
 
 const styles = StyleSheet.create({
     carouselContainer: {
+        flex: 1,
         paddingVertical: 25,
         paddingHorizontal: '4%',
         backgroundColor: '#FFFFF0',
@@ -128,12 +137,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 50,
-        paddingHorizontal: 10,
-    },
-    videoHeader: {
-        textAlign: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
         paddingHorizontal: 10,
     },
     brand: {
@@ -160,6 +163,7 @@ const styles = StyleSheet.create({
         height: 200,
         resizeMode: 'cover',
     },
+
     indicatorContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -207,13 +211,44 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         paddingHorizontal: 10,
         paddingVertical: 10,
-        textAlignVertical: 'center',
     },
-    video: {
-        width: '100%',
-        height: 200,
+    videoHeader: {
+        alignItems: 'center',
         marginBottom: 20,
     },
+    collageRow: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 20,
+        marginRight: 100,
+        gap: 10,
+    },
+
+    collageImageLeft: {
+        width: (width - 30) / 2,   // Adjusted width
+        height: 250,
+        borderRadius: 12,
+    },
+
+    collageRight: {
+        justifyContent: 'space-between',
+        height: 250,
+    },
+
+    collageImageRightTop: {
+        width: (width - 30) / 2,
+        height: 120,
+        borderRadius: 12,
+        marginBottom: 10,
+    },
+
+    collageImageRightBottom: {
+        width: (width - 30) / 2,
+        height: 120,
+        borderRadius: 12,
+    },
+
     footer: {
         marginTop: 50,
         alignItems: 'center',

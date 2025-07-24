@@ -2,26 +2,29 @@ import React, { useState } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     TextInput,
+    StyleSheet,
     TouchableOpacity,
-    ImageBackground,
+    Image,
     ScrollView,
-    Platform,
+    Dimensions,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
-import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import apiService from '../services/apiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LoginScreen = ({ navigation }) => {
-    const [username, setUsername] = useState('');
+const { width } = Dimensions.get('window');
+
+const LoginScreen = ({navigation}) => {
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [secureText, setSecureText] = useState(true);
 
     const onSubmit = async () => {
+        if (!email || !password) return alert('Please fill in all fields');
         try {
             const payload = {
-                email: username,
+                email: email,
                 password: password,
             };
             const result = await apiService.post('auth/login', payload);
@@ -36,163 +39,146 @@ const LoginScreen = ({ navigation }) => {
         }
     };
 
+
+
     return (
-        <ImageBackground
-            source={{
-                uri: 'https://images.unsplash.com/photo-1529313780224-1a12b68bed16?q=80&w=387&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-            }}
-            style={styles.background}
-            resizeMode="cover"
-        >
-            {/* <LinearGradient
-                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,1)']}
-                style={styles.bottomFade}
-            /> */}
+        <View style={styles.container}>
+            <ScrollView contentContainerStyle={styles.inner}>
+                {/* Top Agriculture Image */}
+                <Image
+                    source={{
+                        uri: 'https://images.unsplash.com/photo-1559884743-74a57598c6c7?q=80&w=876&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+                    }}
+                    style={styles.topImage}
+                />
 
-            <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-                <View style={styles.glassContainer}>
-                    {/* {Platform.OS === 'ios' ? ( */}
-                    <BlurView
-                        style={styles.absolute}
-                        blurType="light"
-                        blurAmount={5}
-                        reducedTransparencyFallbackColor="white"
+                {/* Logo */}
+                <Text style={styles.logo}>CropCircle</Text>
+
+                {/* Login Card */}
+                <View style={styles.card}>
+                    <Text style={styles.heading}>Welcome Back !</Text>
+
+                    <Text style={styles.label}>E-mail</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
                     />
-                    {/* ) : ( */}
-                    <View style={[styles.absolute, { backgroundColor: 'rgba(255,255,255,0.1)' }]} />
-                    {/* )} */}
 
-                    <LinearGradient
-                        colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.05)']}
-                        style={styles.gradientOverlay}
-                    >
-                        <View>
-                            <Text style={styles.title}>Welcome Back !</Text>
-                            <Text style={styles.secondaryTitle}>Already Have an Account ?</Text>
-                        </View>
-
-                        <View>
-                            <TextInput
-                                placeholder="Email"
-                                placeholderTextColor="#eee"
-                                style={styles.input}
-                                value={username}
-                                onChangeText={setUsername}
+                    <Text style={styles.label}>Password</Text>
+                    <View style={styles.passwordContainer}>
+                        <TextInput
+                            style={[styles.input, { paddingRight: 35 }]}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={secureText}
+                            autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                            style={styles.eyeIcon}
+                            onPress={() => setSecureText(!secureText)}
+                        >
+                            <Icon
+                                name={secureText ? 'visibility-off' : 'visibility'}
+                                size={20}
+                                color="#4b6043"
                             />
+                        </TouchableOpacity>
+                    </View>
 
-                            <TextInput
-                                placeholder="Password"
-                                placeholderTextColor="#eee"
-                                secureTextEntry
-                                style={styles.input}
-                                value={password}
-                                onChangeText={setPassword}
-                            />
+                    <TouchableOpacity style={styles.forgotWrapper}>
+                        <Text style={styles.forgotText}>Forgot your password?</Text>
+                    </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.button} onPress={onSubmit}>
-                                <Text style={styles.buttonText}>Login</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.forgotText}>Forgot Password ?</Text>
-                        </View>
-                    </LinearGradient>
+                    <TouchableOpacity style={styles.button} onPress={onSubmit}>
+                        <Text style={styles.buttonText}>Login</Text>
+                    </TouchableOpacity>
                 </View>
-                {/* <Text style={styles.footerText}>Crafted by Softhought in Kolkata</Text> */}
             </ScrollView>
-        </ImageBackground>
+        </View>
     );
 };
 
+export default LoginScreen;
+
 const styles = StyleSheet.create({
-    background: {
-        flex: 1,
-    },
     container: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        zIndex: 2,
-        marginTop: 150,
-    },
-    glassContainer: {
-        width: '100%',
-        borderRadius: 20,
-        overflow: 'hidden',
-        position: 'relative',
-        height: 350,
-    },
-    absolute: {
-        ...StyleSheet.absoluteFillObject,
-        borderRadius: 20,
-    },
-    gradientOverlay: {
-        padding: 25,
-        borderRadius: 20,
-        justifyContent: 'space-between',
-        flexDirection: 'column',
         flex: 1,
+        backgroundColor: '#FFFFF0', // Ivory background
     },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: 'green',
-        textAlign: 'center',
-        marginBottom: 10,
+    inner: {
+        alignItems: 'center',
+        paddingBottom: 40,
     },
-    secondaryTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#000',
-        textAlign: 'center',
+    topImage: {
+        width: width,
+        height: 200,
+        resizeMode: 'cover',
+        borderBottomLeftRadius: 40,
+        borderBottomRightRadius: 40,
+    },
+    logo: {
+        fontSize: 40,
+        fontWeight: 'bold',
+        color: '#2e7d32', // Deep green
+        marginTop: 30,
+        marginBottom: 30,
+    },
+    card: {
+        backgroundColor: '#FFFFF0',
+        width: width * 0.9,
+        borderRadius: 20,
+        padding: 25,
+        marginTop: 50,
+    },
+    heading: {
+        fontSize: 26,
+        fontWeight: 'bold',
         marginBottom: 25,
+        color: '#2e7d32',
+    },
+    label: {
+        fontSize: 13,
+        color: '#444',
+        marginTop: 10,
     },
     input: {
-        borderColor: 'rgba(255,255,255,0.5)',
-        borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        marginBottom: 15,
+        borderBottomWidth: 1,
+        borderColor: '#aaa',
+        fontSize: 16,
+        paddingVertical: 6,
         color: '#000',
-        backgroundColor: 'rgba(6, 6, 6, 0.15)',
+    },
+    passwordContainer: {
+        position: 'relative',
+        justifyContent: 'center',
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 0,
+        bottom: 10,
+    },
+    forgotWrapper: {
+        alignSelf: 'flex-end',
+        marginTop: 10,
+    },
+    forgotText: {
+        fontSize: 13,
+        color: '#388e3c',
     },
     button: {
-        backgroundColor: 'green',
-        borderRadius: 10,
-        padding: 14,
-        marginTop: 10,
+        marginTop: 30,
+        backgroundColor: '#388e3c',
+        paddingVertical: 14,
+        borderRadius: 8,
+        alignItems: 'center',
     },
     buttonText: {
         color: '#fff',
-        textAlign: 'center',
-        fontWeight: '600',
         fontSize: 16,
     },
-    footerText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 16,
-        textAlign: 'center',
-        position: 'absolute',
-        bottom: 20,
-        width: '100%',
-    },
-    forgotText: {
-        color: '#000',
-        textAlign: 'right',
-        marginTop: 10,
-        fontSize: 16,
-    },
-    bottomFade: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '100%', // covers the bottom half
-        zIndex: 1, // ensure it appears above the background but below content
-        pointerEvents: 'none',
-    }
-
 });
 
-export default LoginScreen;

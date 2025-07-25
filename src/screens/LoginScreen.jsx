@@ -11,10 +11,12 @@ import {
     Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import apiService from '../services/apiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-const LoginScreen = ({navigation}) => {
+const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [secureText, setSecureText] = useState(true);
@@ -23,19 +25,34 @@ const LoginScreen = ({navigation}) => {
         password: false
     });
 
-    const handleFocus = (field) => setIsFocused({...isFocused, [field]: true});
-    const handleBlur = (field) => setIsFocused({...isFocused, [field]: false});
+    const handleFocus = (field) => setIsFocused({ ...isFocused, [field]: true });
+    const handleBlur = (field) => setIsFocused({ ...isFocused, [field]: false });
 
     const onSubmit = async () => {
-        // Your submit logic here
+        if (!email || !password) return alert('Please fill in all fields');
+        try {
+            const payload = {
+                email: email,
+                password: password,
+            };
+            const result = await apiService.post('auth/login', payload);
+            console.log('Login Result:', result);
+
+            if (result.status === 'SUCCESS') {
+                await AsyncStorage.setItem('token', result.response.token);
+                navigation.navigate('Dashboard');
+            }
+        } catch (error) {
+            console.error('Something Went Wrong', error.message);
+        }
     };
 
     return (
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <ScrollView 
+            <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 keyboardShouldPersistTaps="handled"
             >

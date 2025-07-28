@@ -19,7 +19,7 @@ export default function DashboardTabs() {
         tabBarIcon: ({ focused }) => {
           let icon;
           if (route.name === 'TabHome') icon = 'home';
-          else if (route.name === 'Transactions') icon = 'account-balance-wallet';
+          else if (route.name === 'Trade') icon = 'balance';
           else if (route.name === 'Profile') icon = 'account-circle';
 
           return <Icon name={icon} size={24} color={focused ? '#2e7d32' : '#B0B0B0'} />;
@@ -30,7 +30,7 @@ export default function DashboardTabs() {
       })}
     >
       <Tab.Screen name="TabHome" component={TabHomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Transactions" component={TransactionsScreen} />
+      <Tab.Screen name="Trade" component={TransactionsScreen} />
       <Tab.Screen name="Profile" component={CardsScreen} />
     </Tab.Navigator>
   );

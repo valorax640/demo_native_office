@@ -37,6 +37,7 @@ const CropDashboard = () => {
   const [cropQuantity, setCropQuantity] = useState('');
   const [cropPrice, setCropPrice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedBuyer, setSelectedBuyer] = useState(null);
 
   const chartData = {
     ...chartDataSets[selectedTimeframe],
@@ -49,6 +50,10 @@ const CropDashboard = () => {
   const price = 145.02;
   const change = 12.7;
   const percentage = 9.6;
+
+  const handleBuyer = (buyer) => {
+    setSelectedBuyer(buyer);
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -184,7 +189,12 @@ const CropDashboard = () => {
             { name: 'Harvest Hub', price: 170, change: '-1.2%', positive: false },
             { name: 'Crop Masters', price: 220, change: '+3.2%', positive: true },
           ].map((buyer, idx) => (
-            <TouchableOpacity key={idx} style={styles.tableRow} activeOpacity={0.7}>
+            <TouchableOpacity
+              key={idx}
+              style={styles.tableRow}
+              activeOpacity={0.7}
+              onPress={() => handleBuyer(buyer)}
+            >
               <View style={styles.buyerInfo}>
                 <View style={styles.buyerAvatar}>
                   <Text style={styles.buyerInitial}>{buyer.name.charAt(0)}</Text>

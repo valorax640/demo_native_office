@@ -3,9 +3,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Platform, StyleSheet } from 'react-native';
 
-import TabHomeScreen from '../screens/TabHomeScreen'; // ✅ New Home inside tab
-import TransactionsScreen from '../screens/TransactionsScreen';
-import CardsScreen from '../screens/CardsScreen';
+import HomeScreen from '../screens/HomeScreen'; // ✅ New Home inside tab
+import TradeScreen from '../screens/TradeScreen';
+import CardsScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -18,7 +18,7 @@ export default function DashboardTabs() {
         tabBarStyle: styles.tabBar,
         tabBarIcon: ({ focused }) => {
           let icon;
-          if (route.name === 'TabHome') icon = 'home';
+          if (route.name === 'Home') icon = 'home';
           else if (route.name === 'Trade') icon = 'balance';
           else if (route.name === 'Profile') icon = 'account-circle';
 
@@ -29,8 +29,8 @@ export default function DashboardTabs() {
         tabBarLabelStyle: { fontSize: 12 },
       })}
     >
-      <Tab.Screen name="TabHome" component={TabHomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Trade" component={TransactionsScreen} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="Trade" component={TradeScreen} />
       <Tab.Screen name="Profile" component={CardsScreen} />
     </Tab.Navigator>
   );

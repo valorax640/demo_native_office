@@ -1,223 +1,314 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  ScrollView,
-  Image,
-  StyleSheet,
-  Dimensions,
   Text,
+  StyleSheet,
   TouchableOpacity,
-  Animated
+  ScrollView,
+  Dimensions,
+  Animated,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
-import { useIsFocused } from '@react-navigation/native';
+import { BarChart as ChartKitBar, PieChart } from 'react-native-chart-kit';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Feather from 'react-native-vector-icons/Feather';
+import Geolocation from 'react-native-geolocation-service';
+import { useLocation } from '../context/LocationContext';
+import SkeletonLoader from '../components/SkeletonLoader';
+import InfoCard from '../components/InfoCard';
 
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.9;
-const CARD_HEIGHT = CARD_WIDTH * 0.6;
-
-const images = [
-  'https://plus.unsplash.com/premium_photo-1664301448502-c1c7a573aef9?q=80&w=904&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?q=80&w=870&auto=format&fit=crop',
-  'https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=870&auto=format&fit=crop',
-];
+const screenWidth = Dimensions.get('window').width;
 
 const features = [
   {
-    icon: 'storefront',
-    title: 'Direct Farm Access',
-    description: 'Connect directly with verified farmers to get fresh produce without middlemen.'
+    icon: 'eco',
+    title: 'Total Products Listed',
+    value: '15'
   },
   {
-    icon: 'local-shipping',
-    title: 'Logistics Support',
-    description: 'Integrated delivery options for smooth and timely transportation.'
+    icon: 'currency-rupee',
+    title: 'Total Sales',
+    value: '₹ 75,000'
   },
   {
-    icon: 'price-check',
-    title: 'Transparent Pricing',
-    description: 'Real-time market rates ensure fair pricing for both farmers and buyers.'
+    icon: 'inventory',
+    title: 'Pending Orders',
+    value: '3'
   },
   {
-    icon: 'support-agent',
-    title: '24/7 Support',
-    description: 'Dedicated assistance for order, payment, and logistics queries.'
-  },
-  {
-    icon: 'insights',
-    title: 'Smart Insights',
-    description: 'Track purchase trends, demand forecasts, and farming seasons for better decisions.'
+    icon: 'check-circle',
+    title: 'Delivered Orders',
+    value: '12'
   }
 ];
 
+const cropData = [
+  {
+    name: "Wheat",
+    population: 4500,
+    color: "#4CAF50",
+    legendFontColor: "#333",
+    legendFontSize: 14
+  },
+  {
+    name: "Rice",
+    population: 3000,
+    color: "#FFC107",
+    legendFontColor: "#333",
+    legendFontSize: 14
+  },
+  {
+    name: "Corn",
+    population: 2200,
+    color: "#03A9F4",
+    legendFontColor: "#333",
+    legendFontSize: 14
+  },
+  {
+    name: "Barley",
+    population: 1300,
+    color: "#E91E63",
+    legendFontColor: "#333",
+    legendFontSize: 14
+  },
+];
 
-const Carousel = ({ navigation }) => {
-  const scrollViewRef = useRef(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const isFocused = useIsFocused();
+
+const SalesDashboard = () => {
+  const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [activeTab, setActiveTab] = useState('Analytics');
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const [isLoadingAddress, setIsLoadingAddress] = useState(true);
+  const { address, updateLocation, updateAddress } = useLocation();
+
+  const GOOGLE_API_KEY = 'AIzaSyCEQXnTKBQGY4Y5AK4ojtvSQ1SFfWYXEv4'; // Replace with your API key
 
   useEffect(() => {
-    if (!isFocused) return;
-
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 500,
+      duration: 600,
       useNativeDriver: true
     }).start();
 
-    const interval = setInterval(() => {
-      setActiveIndex(prev => {
-        const nextIndex = (prev + 1) % images.length;
-        scrollViewRef.current?.scrollTo({ x: nextIndex * width, animated: true });
-        return nextIndex;
-      });
-    }, 3000);
+    // Get location when component mounts
+    if (!address) {
+      getLocation();
+    } else {
+      setIsLoadingAddress(false);
+    }
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [isFocused]);
+  const getLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    return true; // iOS already configured
+  };
 
-  const onScroll = (event) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
-    setActiveIndex(index);
+  const getLocation = async () => {
+    const hasPermission = await getLocationPermission();
+    if (!hasPermission) {
+      console.log('Permission denied');
+      setIsLoadingAddress(false);
+      return;
+    }
+
+    Geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        updateLocation({ latitude, longitude });
+        getAddressFromCoords(latitude, longitude);
+      },
+      (error) => {
+        console.log('Location error:', error);
+        setIsLoadingAddress(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
+  const getAddressFromCoords = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_API_KEY}`
+      );
+      const data = await response.json();
+      if (data.results.length > 0) {
+        const formattedAddress = data.results[0].formatted_address;
+        updateAddress(formattedAddress);
+      } else {
+        updateAddress('Address not found');
+      }
+    } catch (err) {
+      console.log('Geocoding error:', err);
+      updateAddress('Error fetching address');
+    }
+    setIsLoadingAddress(false);
+  };
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true
+    }).start();
+  }, []);
+
+  const monthlyData = [10000, 6000, 4000, 2000, 5000, 7000];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const categories = ['Semua', 'Food', 'Drink', 'Snack', 'Dessert'];
+  const bestseller = {
+    name: 'Special fried rice',
+    total: 850
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 50 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.brand}>CropCircle</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Login')}
-          style={styles.loginButton}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.loginButtonText}>Get Started</Text>
-          <Icon name="arrow-forward" size={18} color="#fff" style={styles.buttonIcon} />
+        <View style={styles.headerLeft}>
+          {isLoadingAddress ? (
+            <SkeletonLoader width={'40%'} />
+          ) : (
+            <Text style={styles.brand}>Hi, Developer</Text>
+          )}
+          {isLoadingAddress ? (
+            <SkeletonLoader width={'80%'} />
+          ) : (
+            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
+              {address || 'Maharaja Tagore Road, Dhakuria, Kolkata, West Bengal 700092'}
+            </Text>
+          )}
+        </View>
+        <View style={styles.notifyIcon}>
+          <Icon name="notifications" size={24} color="#388e3c" />
+        </View>
+      </View>
+
+      {/* Top Tabs */}
+      <View style={styles.tabContainerTop}>
+        <TouchableOpacity style={{ width: '50%' }} onPress={() => setActiveTab('Analytics')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'Analytics' ? styles.activeTabTop : styles.inactiveTabTop
+            ]}
+          >
+            Analytics
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={{ width: '50%' }} onPress={() => setActiveTab('Insights')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'Insights' ? styles.activeTabTop : styles.inactiveTabTop
+            ]}
+          >
+            Insights
+          </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Hero Carousel */}
-      <View style={styles.carouselWrapper}>
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-        >
-          {images.map((img, index) => (
-            <View key={index} style={styles.slide}>
-              <Image source={{ uri: img }} style={styles.carouselImage} />
-              <View style={styles.imageOverlay}>
-                <Text style={styles.slideTitle}>Trade with Transparency</Text>
-                <Text style={styles.slideText}>Oppurtunity to trade better by choosing the better</Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.indicatorContainer}>
-          {images.map((_, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.dot, i === activeIndex ? styles.activeDot : null]}
-              onPress={() => {
-                scrollViewRef.current?.scrollTo({ x: i * width, animated: true });
-                setActiveIndex(i);
+      {activeTab === 'Analytics' ? (
+        <ScrollView style={styles.body}>
+          {/* Sales Chart Section */}
+          <View style={styles.section}>
+            {/* <Text style={styles.sectionTitle}>Monthly Sale</Text> */}
+            <ChartKitBar
+              data={{
+                labels: months,
+                datasets: [
+                  {
+                    data: monthlyData
+                  }
+                ]
               }}
-              activeOpacity={0.7}
+              width={screenWidth - 32}
+              height={220}
+              // yAxisLabel="₹"
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16
+                },
+                propsForBackgroundLines: {
+                  stroke: '#e3e3e3'
+                }
+              }}
+              verticalLabelRotation={0}
+              style={{ borderRadius: 12, marginTop: 12 }}
             />
-          ))}
-        </View>
-      </View>
-
-      {/* Features Section */}
-      <Text style={styles.sectionTitle}>Offerings</Text>
-      <View style={styles.featuresContainer}>
-        {features.map((feature, index) => (
-          <Animated.View
-            key={index}
-            style={[styles.featureCard, { opacity: fadeAnim }]}
-          >
-            <View style={styles.featureIcon}>
-              <Icon name={feature.icon} size={28} color="#388e3c" />
-            </View>
-            <View>
-              <Text style={styles.featureTitle}>{feature.title}</Text>
-              <Text style={styles.featureText}>{feature.description}</Text>
-            </View>
-          </Animated.View>
-        ))}
-      </View>
-
-      {/* Demo Section */}
-      <View style={styles.demoSection}>
-        <Image
-          source={{
-            uri: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=774&auto=format&fit=crop',
-          }}
-          style={styles.demoImage}
-        />
-        <BlurView
-          style={styles.demoBlur}
-          blurType="light"
-          blurAmount={5}
-          overlayColor="transparent"
-        >
-          <Text style={styles.glassText}>
-            "Empowering farmers with direct access to markets, our platform bridges the gap between growers and buyers. Whether you're sourcing fresh produce or looking to sell your harvest fairly, we make trading simple, transparent, and rewarding for everyone."
-          </Text>
-        </BlurView>
-      </View>
-
-      {/* Testimonials */}
-      <Text style={styles.sectionTitle}>User Testimonials</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.testimonialsContainer}
-      >
-        {[1, 2, 3].map((item) => (
-          <View key={item} style={styles.testimonialCard}>
-            <Image
-              source={{ uri: `https://randomuser.me/api/portraits/${item % 2 === 0 ? 'women' : 'men'}/${item}0.jpg` }}
-              style={styles.avatar}
-            />
-            <Text style={styles.testimonialText}>
-              ""This platform helped me sell my crops directly to buyers at better prices!""
-            </Text>
-            <Text style={styles.testimonialAuthor}>- Mohan Das</Text>
-            <View style={styles.rating}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Icon
-                  key={star}
-                  name="star"
-                  size={16}
-                  color="#FFD700"
-                />
-              ))}
-            </View>
           </View>
-        ))}
-      </ScrollView>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Crafted by Softhought in Kolkata</Text>
-        <View style={styles.socialIcons}>
-          <FontAwesome name="facebook" size={24} color="#388e3c" style={styles.socialIcon} />
-          <FontAwesome name="twitter" size={24} color="#388e3c" style={styles.socialIcon} />
-          <FontAwesome name="instagram" size={24} color="#388e3c" style={styles.socialIcon} />
-        </View>
-      </View>
+          {/* Features Section */}
+          <View style={styles.featuresContainer}>
+            {features.map((feature, index) => (
+              <Animated.View
+                key={index}
+                style={[styles.featureCard, { opacity: fadeAnim }]}
+              >
+                <View style={styles.iconHeader}>
+                  <View style={styles.featureIcon}>
+                    <Icon name={feature.icon} size={20} color="#388e3c" />
+                  </View>
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                </View>
+
+                <Text style={styles.featureValue}>{feature.value}</Text>
+              </Animated.View>
+            ))}
+          </View>
+        </ScrollView>
+      ) : (
+        <ScrollView style={styles.body}>
+
+          <View style={styles.sectionInsights}>
+            <Text style={styles.sectionTitleInsights}>This Month's Highlights</Text>
+
+            <InfoCard
+              icon={<MaterialCommunityIcons name="chart-pie" size={24} color="#2E7D32" />}
+              title="TOP CROP"
+              content="Wheat – ₹4500"
+            />
+
+            <InfoCard
+              icon={<Feather name="trending-up" size={24} color="#2E7D32" />}
+              title="GROWTH"
+              content="18% sales vs last month"
+            />
+          </View>
+
+          <View style={{ alignItems: 'center', marginTop: 30, borderColor: 'lightgrey', padding: 10, borderRadius: 25, borderWidth: 0.5 }}>
+            {/* <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Crop Production Share</Text> */}
+            <PieChart
+              data={cropData}
+              width={screenWidth}
+              height={220}
+              chartConfig={{
+                backgroundColor: '#ddd',
+                backgroundGradientFrom: "#ddd",
+                backgroundGradientTo: "#ddd",
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              }}
+              accessor={"population"}
+              backgroundColor={"transparent"}
+              paddingLeft={"15"}
+              center={[10, 10]}
+              absolute
+            />
+          </View>
+
+        </ScrollView>
+      )}
     </ScrollView>
   );
 };
@@ -225,10 +316,10 @@ const Carousel = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFF0',
+    backgroundColor: '#fff'
   },
   header: {
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -241,101 +332,90 @@ const styles = StyleSheet.create({
     elevation: 5,
     borderBottomEndRadius: 20,
     borderBottomStartRadius: 20,
+    marginBottom: 25
   },
-  brand: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    fontFamily: 'sans-serif-medium',
+  body: {
+    paddingHorizontal: 16,
+    paddingBottom: 100
   },
-  loginButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  notifyIcon: {
+    backgroundColor: '#FFFFF0',
+    width: 40,
+    height: 40,
     borderRadius: 25,
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 10
   },
-  loginButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  buttonIcon: {
-    marginLeft: 5,
-  },
-  carouselWrapper: {
-    marginTop: 20,
-    height: CARD_HEIGHT,
-  },
-  slide: {
-    width: width,
-    height: CARD_HEIGHT,
-    position: 'relative',
-  },
-  carouselImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    paddingBottom: 30,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  slideTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
-  },
-  slideText: {
-    fontSize: 16,
-    color: '#fff',
-  },
-  indicatorContainer: {
-    flexDirection: 'row',
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'column',
     justifyContent: 'center',
-    marginTop: 10,
+    alignItems: 'flex-start',
+    gap: 4
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#ccc',
-    marginHorizontal: 5,
+  brand: {
+    fontSize: 20,
+    color: '#fff',
+    fontFamily: 'sans-serif-medium'
   },
-  activeDot: {
-    backgroundColor: '#4c669f',
-    width: 12,
-    height: 12,
+  locationText: {
+    fontSize: 14,
+    color: '#ddd',
+    fontFamily: 'sans-serif-medium',
+    overflow: 'hidden',
+    maxWidth: '80%'
+  },
+  section: {
+    marginVertical: 24
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginTop: 30,
-    marginBottom: 15,
-    paddingHorizontal: 20,
+    marginVertical: 4
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 20
+  },
+  categoryButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginRight: 8,
+    marginBottom: 8
+  },
+  selectedCategory: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50'
+  },
+  categoryText: {
+    color: '#333'
+  },
+  selectedCategoryText: {
+    color: '#fff'
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
   },
   featuresContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    paddingHorizontal: 10,
+    justifyContent: 'space-between',
   },
   featureCard: {
-    width: width * 0.9,
-    backgroundColor: '#FFFFF0',
+    width: screenWidth * 0.44,
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
@@ -343,11 +423,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 3
+  },
+  iconHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
-
+    marginBottom: 10,
+    justifyContent: 'center',
+    gap: 20
   },
   featureIcon: {
     backgroundColor: 'rgba(76, 102, 159, 0.1)',
@@ -356,113 +439,101 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 10
   },
   featureTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: 'grey',
     marginBottom: 5,
+    width: screenWidth * 0.25,
   },
-  featureText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 20,
-    width: width * 0.7,
-  },
-  demoSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    borderRadius: 15,
-    overflow: 'hidden',
-    height: 300,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-    justifyContent: 'center',
-  },
-  glassText: {
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
-    paddingHorizontal: 10,
-  },
-  demoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  demoBlur: {
-    position: 'absolute',
-    bottom: 30,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-  },
-  testimonialsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  testimonialCard: {
-    width: width * 0.8,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    marginRight: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignSelf: 'center',
-    marginBottom: 15,
-  },
-  testimonialText: {
-    fontSize: 16,
-    color: '#555',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginBottom: 10,
-    lineHeight: 22,
-  },
-  testimonialAuthor: {
-    fontSize: 14,
+  featureValue: {
+    fontSize: 25,
     fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  rating: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  footer: {
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    marginTop: 30,
-    alignItems: 'center',
-    backgroundColor: '#FFFFF0',
-  },
-  footerText: {
-    fontSize: 16,
     color: '#388e3c',
-    textAlign: 'center',
-    marginBottom: 15,
+    marginTop: 6,
+    textAlign: 'right'
   },
-  socialIcons: {
+
+  tabContainerTop: {
     flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 8,
+    marginHorizontal: 16,
   },
-  socialIcon: {
-    marginHorizontal: 10,
+  tabText: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    textAlign: 'center',
+  },
+  activeTabTop: {
+    backgroundColor: '#4CAF50',
+    color: '#fff',
+  },
+  inactiveTabTop: {
+    backgroundColor: 'transparent',
+    color: '#333',
+  },
+
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4
+  },
+  activeTab: {
+    backgroundColor: '#4CAF50',
+    color: '#fff',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 6
+  },
+  inactiveTab: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 6
+  },
+  bestsellerCard: {
+    backgroundColor: '#f9f9f9',
+    padding: 16,
+    borderRadius: 8
+  },
+  bestsellerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8
+  },
+  bestsellerTotal: {
+    fontSize: 14,
+    color: '#666'
+  },
+  headerInsights: {
+    backgroundColor: '#2E7D32',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  headerText: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  sectionInsights: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  sectionTitleInsights: {
+    color: '#388e3c',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginVertical: 20,
+    textAlign: 'center',
   },
 });
 
-export default Carousel;
+export default SalesDashboard;

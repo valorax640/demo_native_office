@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import HomeScreen from './src/screens/HomeScreen';
+import EntryScreen from './src/screens/EntryScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardTabs from './src/navigation/DashboardTabs';
 import { ActivityIndicator, View } from 'react-native';
+import { LocationProvider } from './src/context/LocationContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,10 +20,10 @@ export default function App() {
         if (token) {
           setInitialRoute("Dashboard");
         } else {
-          setInitialRoute('Home');
+          setInitialRoute('Entry');
         }
       } catch (e) {
-        setInitialRoute('Home');
+        setInitialRoute('Entry');
       }
     };
     checkToken();
@@ -38,12 +39,14 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardTabs} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <LocationProvider>
+      <NavigationContainer>
+        <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Entry" component={EntryScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Dashboard" component={DashboardTabs} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </LocationProvider>
   );
 }
